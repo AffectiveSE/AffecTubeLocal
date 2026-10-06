@@ -5,25 +5,14 @@ _AffectTube_ is an extension for the Chrome web browser that enables annotating 
 
 ## Configuration
 
-The extension is distributed to annotators in source code form. Before sharing the archive with annotators, modifications to the source code must be made, i.e., defining the server to which the annotated date will be sent and the list of labels. 
+The extension is distributed to annotators in source code form. Before sharing the archive with annotators, the list of labels can be adjusted in the `src/inject/inject.js` file.
 
-Both changes are made in the `src/inject/inject.js` file. 
+### Saving results
 
-### StorageAPI
-
-If you want to use the on-premises [StorageAPI](https://github.com/AffecTube/StorageAPI), its address and optional port number should be entered in the 3rd line:
-```js
-    this.urlApi = "http[s]://ADDRESS[:PORT]/LabelingEmotionsDatabase/";
-```
-
-### GitHub storage
-
-If you are using GitHub to receive data from an extension, you should place the appropriate data in the constructor of the `DataUploaderGithub` class (line 34). You should provide the address of the server and the tokens that were generated in the GitHub repository. More informaction about GitHub API can be found in [documentation](https://docs.github.com/en/rest/overview/about-githubs-apis).
-
-It is also necessary to change the `dataUploader` in line 144 from `DataUploaderAPI` to `DataUploaderGithub`.
+Annotation results are not sent to any server. When the annotator presses **_Save to file_**, a "Save As" dialog opens and the annotations are saved locally as a JSON file (default name: `affectube_<videoId>_<username>_<timestamp>.json`). The annotators then deliver these files to the study organizers.
 
 ### Labels definition
-The list of available labels is defined on line 137. They are customizable and can be tailored to the needs of the study in question.
+The list of available labels is defined in the `emotions` variable. They are customizable and can be tailored to the needs of the study in question.
 ```js
   let emotions = ["happiness", "sadness", "disgust", "fear", "surprise", "anger", "confusion"];
 ```
@@ -60,7 +49,7 @@ The main window of the extension looks as shown below:
 
 - After pressing the **_Update_** button, the username will be updated.
 
-- After pressing the **_Submit_** button, all annotations are sent to the server, and the cache is cleared.
+- After pressing the **_Save to file_** button, all annotations for the current video are saved to a local JSON file. Once the file has been saved, the cache is cleared. If the dialog is cancelled, the annotations are kept.
 
 
 After opening a video on the _YouTube_ platform, additional buttons will be added to mark emotions in the video. You can mark the moment when a particular emotion starts by clicking on the corresponding button.

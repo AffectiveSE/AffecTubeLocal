@@ -1,22 +1,12 @@
-class DataUploaderAPI {
-  constructor() {
-    this.urlApi = "https://labelling-api.affectivese.org/LabelingEmotionsDatabase/";
-  }
-
-  uploadData(data, onSuccess, onFailure) {
-    return fetch(
-      this.urlApi + crypto.randomUUID().toString() + ".json",
-      {
-        method: 'PUT',
-        headers: {
-          'accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      }
-    ).then((res) => {
-      console.log("Upload status: " + res.statusText);
-      if (res.ok) {
+class DataSaverFile {
+  saveData(data, filename, onSuccess, onFailure) {
+    chrome.runtime.sendMessage({
+      type: "saveFile",
+      filename: filename,
+      data: data
+    }, (res) => {
+      console.log("Save status: " + (res && res.ok ? "ok" : res && res.error));
+      if (res && res.ok) {
         onSuccess.forEach((onSuccessCallback) => {
           onSuccessCallback();
         });
@@ -24,45 +14,7 @@ class DataUploaderAPI {
       else
       {
         onFailure.forEach((onFailureCallback) => {
-          onFailureCallback();
-        });
-      }
-    });
-  }
-}
-
-class DataUploaderGithub {
-  constructor() {
-    this.urlApi = "https://api.github.com/repos/danielkulas/LabelingEmotionsDatabase/contents/";
-    this.token1 = "11AJOQWMQ0p2ptv7D9hBch";
-    this.token2 = "rAFk3RfO94NyVncAT9pYdeej0NGnC7U0jWqJtMOu9WwI7V2AKEQ7NDzFrGt";
-  }
-
-  uploadData(data, onSuccess, onFailure) {
-    return fetch(
-      this.urlApi + crypto.randomUUID().toString() + ".json",
-      {
-        method: "PUT",
-        headers: {
-          Accept: "application/vnd.github+json",
-          Authorization: "Bearer " + "github_pat_" + this.token1 + "_" + this.token2
-        },
-        body: JSON.stringify({
-          message: "Data uploaded from API",
-          content: btoa(data)
-        })
-      }
-    ).then((res) => {
-      console.log("Upload status: " + res.statusText);
-      if (res.ok) {
-        onSuccess.forEach((onSuccessCallback) => {
-          onSuccessCallback();
-        });
-      }
-      else
-      {
-        onFailure.forEach((onFailureCallback) => {
-          onFailureCallback();
+          onFailureCallback(res && res.error);
         });
       }
     });
@@ -140,8 +92,7 @@ class ChromeStorageManager {
   let videoPlayer;
   let videoURL;
 
-  const dataUploader = new DataUploaderAPI();
-  //const dataUploader = new DataUploaderGithub();
+  const dataSaver = new DataSaverFile();
   const playerManager = new PlayerManager();
   const chromeStorage = new ChromeStorageManager();
 
@@ -183,17 +134,25 @@ class ChromeStorageManager {
     }
   }
 
+  function buildFilename(nickname) {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const safeNickname = (nickname || "anonymous").replace(/[^\w-]+/g, "_");
+    return "affectube_" + videoURL + "_" + safeNickname + "_" + timestamp + ".json";
+  }
+
   async function upload() {
     let labels = await chromeStorage.syncLabels(videoURL);
     labels.forEach(e => delete e.id);
     const nickname = await chromeStorage.getStorageData('nickname');
     const url = {"videoURL" : videoURL}
     const merged = {...url, ...nickname, ...labels}
+    const savedVideoURL = videoURL;
 
-    dataUploader.uploadData(
-      JSON.stringify(merged),
-      [() => chrome.storage.sync.remove([videoURL]), () => alert("The data has been successfully uploaded")],
-      [() => alert("Something went wrong...")]
+    dataSaver.saveData(
+      JSON.stringify(merged, null, 2),
+      buildFilename(nickname.nickname),
+      [() => chrome.storage.sync.remove([savedVideoURL])],
+      [(error) => { if (error !== "canceled") alert("Saving the file failed: " + error); }]
     );
   }
 
